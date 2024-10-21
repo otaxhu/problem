@@ -28,6 +28,16 @@ func compactJson(s string) string {
 	return b.String()
 }
 
+func responseFactory(statusCode int, contentType, body string) *http.Response {
+	return &http.Response{
+		StatusCode: statusCode,
+		Header: http.Header{
+			"Content-Type": []string{contentType},
+		},
+		Body: io.NopCloser(strings.NewReader(body)),
+	}
+}
+
 func TestRegisteredProblemMarshaling(t *testing.T) {
 	testCases := map[string]struct {
 		InputProblem *RegisteredProblem
@@ -80,21 +90,15 @@ func TestParseResponse(t *testing.T) {
 		ExpectedProblem *RegisteredProblem
 	}{
 		"JSON: OK": {
-			InputBody: &http.Response{
-				Body: io.NopCloser(strings.NewReader(`
-					{
-						"type": "about:blank",
-						"status": 500,
-						"title": "Internal Server Error",
-						"detail": "test",
-						"instance": "/test"
-					}
-				`)),
-				Header: http.Header{
-					"Content-Type": []string{problemJsonContentType},
-				},
-				StatusCode: http.StatusInternalServerError,
-			},
+			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+				{
+					"type": "about:blank",
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test"
+				}
+			`),
 			ExpectedProblem: &RegisteredProblem{
 				Type:     "about:blank",
 				Status:   http.StatusInternalServerError,
@@ -104,21 +108,15 @@ func TestParseResponse(t *testing.T) {
 			},
 		},
 		"XML: OK": {
-			InputBody: &http.Response{
-				Body: io.NopCloser(strings.NewReader(xml.Header + `
-					<problem xmlns="urn:ietf:rfc:7807">
-						<type>about:blank</type>
-						<status>500</status>
-						<title>Internal Server Error</title>
-						<detail>test</detail>
-						<instance>/test</instance>
-					</problem>
-				`)),
-				Header: http.Header{
-					"Content-Type": []string{problemXmlContentType},
-				},
-				StatusCode: http.StatusInternalServerError,
-			},
+			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<type>about:blank</type>
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+				</problem>
+			`),
 			ExpectedProblem: &RegisteredProblem{
 				Type:     "about:blank",
 				Status:   http.StatusInternalServerError,
@@ -184,6 +182,142 @@ func TestServe(t *testing.T) {
 			//
 			// if recorder.Body.String() != tc.ExpectedXML {
 			// 	t.Errorf("expected %s, got %s", tc.ExpectedJSON, recorder.Body.String())
+			// }
+		})
+	}
+}
+
+type Embed struct {
+	Extension1 string `json:"extension1" xml:"extension1"`
+	RegisteredProblem
+	Extension2 string `json:"extension2" xml:"extension2"`
+}
+
+func TestEmbeddedParseResponseCustom(t *testing.T) {
+	testCases := map[string]struct {
+		InputBody       *http.Response
+		ExpectedProblem *Embed
+	}{
+		"JSON: OK": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+				{
+					"type": "about:blank",
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test",
+					"extension1": "e1",
+					"extension2": "e2"
+				}
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "about:blank",
+					Status:   http.StatusInternalServerError,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+		},
+		"XML: OK": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<type>about:blank</type>
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+					<extension1>e1</extension1>
+					<extension2>e2</extension2>
+				</problem>
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "about:blank",
+					Status:   http.StatusInternalServerError,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			outProblem := &Embed{}
+			err := ParseResponseCustom(tc.InputBody, outProblem)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !equalProblems(outProblem, tc.ExpectedProblem) {
+				t.Errorf("expected %+v, got %+v", tc.ExpectedProblem, outProblem)
+			}
+
+			if outProblem.Extension1 != tc.ExpectedProblem.Extension1 {
+				t.Errorf("expected %s, got %s", tc.ExpectedProblem.Extension1, outProblem.Extension1)
+			}
+
+			if outProblem.Extension2 != tc.ExpectedProblem.Extension2 {
+				t.Errorf("expected %s, got %s", tc.ExpectedProblem.Extension2, outProblem.Extension2)
+			}
+		})
+	}
+}
+
+func TestEmbeddedMarshaling(t *testing.T) {
+	testCases := map[string]struct {
+		InputProblem Embed
+		ExpectedJSON string
+
+		// TODO: find a way to compact a XML document.
+		//
+		// ExpectedXML string
+	}{
+		"OK": {
+			InputProblem: Embed{
+				RegisteredProblem: *NewRegistered(http.StatusBadRequest, "test"),
+				Extension1:        "e1",
+				Extension2:        "e2",
+			},
+			ExpectedJSON: compactJson(`
+				{
+					"extension1": "e1",
+					"type": "about:blank",
+					"status": 400,
+					"title": "Bad Request",
+					"detail": "test",
+					"instance": "",
+					"extension2": "e2"
+				}
+			`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b, err := json.Marshal(tc.InputProblem)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(b, []byte(tc.ExpectedJSON)) {
+				t.Errorf("expected %s, got %s", tc.ExpectedJSON, b)
+			}
+
+			// TODO: see above, find a way to compact a XML document.
+			//
+			// b, err = xml.Marshal(tc.InputProblem)
+			// if err != nil {
+			// 	t.Fatal(err)
+			// }
+			// if !bytes.Equal(b, []byte(tc.ExpectedXML)) {
+			// 	t.Errorf("expected %s, got %s", tc.ExpectedXML, b)
 			// }
 		})
 	}
