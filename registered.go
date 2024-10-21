@@ -4,6 +4,16 @@ const problemJsonContentType = "application/problem+json"
 
 const problemXmlContentType = "application/problem+xml"
 
+// Problem details registered members, as those specified in
+// https://datatracker.ietf.org/doc/html/rfc9457#name-members-of-a-problem-detail
+//
+// This struct can be embedded in a custom struct that adds "extension members" (members that are
+// not registered in the above link) like this:
+//
+//	type Custom struct {
+//	    problem.RegisteredProblem
+//	    ExtensionMember string `json:"extension_member" xml:"extension_member"`
+//	}
 type RegisteredProblem struct {
 	// NOTE: used in XML marshaling and unmarshaling
 	XMLName struct{} `json:"-" xml:"urn:ietf:rfc:7807 problem"`
@@ -39,6 +49,14 @@ func (r *RegisteredProblem) setStatus(status int) {
 	r.Status = status
 }
 
+// Problem details map, this implementation is ONLY suitable for JSON marshaling/unmarshaling,
+// it does not support XML.
+//
+// This implementation is useful when you want to unmarshal an "extension member", which you
+// would otherwise have to create a custom struct for. You can get extension members with map
+// access notation:
+//
+//	mapProblem["extension_member"]
 type MapProblem map[string]any
 
 func (m MapProblem) GetType() string {

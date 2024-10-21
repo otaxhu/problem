@@ -7,6 +7,12 @@ import (
 	"strconv"
 )
 
+// ServeXML returns a Handler that serves the p argument in XML format.
+//
+// p MUST not be a [MapProblem], since it cannot be marshaled to XML.
+//
+// Headers Content-Type is set to 'application/problem+xml' and X-Content-Type-Options is set to 'nosniff';
+// and finally writes the status code from p.GetStatus().
 func ServeXML(p Problem) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -19,6 +25,10 @@ func ServeXML(p Problem) http.Handler {
 	})
 }
 
+// ServeJSON returns a Handler that serves the p argument in JSON format
+//
+// Headers Content-Type is set to 'application/problem+json' and X-Content-Type-Options is set to
+// 'nosniff'; and finally writes the status code from p.GetStatus().
 func ServeJSON(p Problem) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
