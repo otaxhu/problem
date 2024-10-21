@@ -29,8 +29,8 @@ type Problem interface {
 //
 // If you want XML support, Instead you should use [NewRegistered] or create your own custom
 // struct that embeds [RegisteredProblem] and set the fields yourself.
-func NewMap(statusCode int, details string) *MapProblem {
-	return &MapProblem{
+func NewMap(statusCode int, details string) MapProblem {
+	return MapProblem{
 		"status": statusCode,
 		"detail": details,
 		"title":  http.StatusText(statusCode),
