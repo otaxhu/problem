@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -88,6 +89,7 @@ func TestParseResponse(t *testing.T) {
 	testCases := map[string]struct {
 		InputBody       *http.Response
 		ExpectedProblem *RegisteredProblem
+		ExpectedError   error
 	}{
 		"JSON: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
@@ -106,6 +108,7 @@ func TestParseResponse(t *testing.T) {
 				Detail:   "test",
 				Instance: "/test",
 			},
+			ExpectedError: nil,
 		},
 		"XML: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
@@ -124,14 +127,23 @@ func TestParseResponse(t *testing.T) {
 				Detail:   "test",
 				Instance: "/test",
 			},
+			ExpectedError: nil,
+		},
+		"Bad Content Type": {
+			InputBody:       responseFactory(http.StatusInternalServerError, "text/plain", "Test plain"),
+			ExpectedProblem: nil,
+			ExpectedError:   ErrInvalidContentType,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			outProblem, err := ParseResponse(tc.InputBody)
+			if !errors.Is(err, tc.ExpectedError) {
+				t.Fatalf("expected `%v`, got `%v`", tc.ExpectedError, err)
+			}
 			if err != nil {
-				t.Fatal(err)
+				return
 			}
 			if !equalProblems(outProblem, tc.ExpectedProblem) {
 				t.Errorf("expected %+v, got %+v", tc.ExpectedProblem, outProblem)
@@ -197,6 +209,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 	testCases := map[string]struct {
 		InputBody       *http.Response
 		ExpectedProblem *Embed
+		ExpectedError   error
 	}{
 		"JSON: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
@@ -221,6 +234,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 					Instance: "/test",
 				},
 			},
+			ExpectedError: nil,
 		},
 		"XML: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
@@ -245,6 +259,12 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 					Instance: "/test",
 				},
 			},
+			ExpectedError: nil,
+		},
+		"Bad Content Type": {
+			InputBody:       responseFactory(http.StatusInternalServerError, "text/plain", "Test plain"),
+			ExpectedProblem: nil,
+			ExpectedError:   ErrInvalidContentType,
 		},
 	}
 
@@ -252,8 +272,11 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			outProblem := &Embed{}
 			err := ParseResponseCustom(tc.InputBody, outProblem)
+			if !errors.Is(err, tc.ExpectedError) {
+				t.Fatalf("expected `%v`, got `%v`", tc.ExpectedError, err)
+			}
 			if err != nil {
-				t.Fatal(err)
+				return
 			}
 
 			if !equalProblems(outProblem, tc.ExpectedProblem) {
