@@ -27,5 +27,7 @@ jobs:
 
     - name: Send Coverage
       uses: shogo82148/actions-goveralls@v1
+      if: github.event_name == 'push'
+      continue-on-error: true
       with:
         path-to-profile: profile.cov
