@@ -3,11 +3,14 @@
 Library for parsing and creating HTTP Problem Details, following RFC 9457 document, for ensuring compatibility between other libraries.
 
 <div>
-  <a href="https://pkg.go.dev/github.com/otaxhu/problem">
-    <img src="https://pkg.go.dev/badge/github.com/otaxhu/problem">
+  <a href="https://pkg.go.dev/github.com/otaxhu/problem" style="text-decoration:none;">
+    <img src="https://pkg.go.dev/badge/github.com/otaxhu/problem" alt="Go Reference">
   </a>
-  <a href='https://coveralls.io/github/otaxhu/problem?branch=main'>
-    <img src='https://coveralls.io/repos/github/otaxhu/problem/badge.svg?branch=main' alt='Coverage Status'>
+  <a href="https://coveralls.io/github/otaxhu/problem?branch=main" style="text-decoration:none;">
+    <img src="https://coveralls.io/repos/github/otaxhu/problem/badge.svg?branch=main" alt="Coverage Status">
+  </a>
+  <a href="https://goreportcard.com/report/github.com/otaxhu/problem" style="text-decoration:none;">
+    <img src="https://goreportcard.com/badge/github.com/otaxhu/problem" alt="Go Report Card">
   </a>
 </div>
 
