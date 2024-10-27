@@ -171,7 +171,7 @@ func TestServe(t *testing.T) {
 					"detail": "test",
 					"instance": ""
 				}
-			`),
+			`) + "\n", // Append newline, because ServeXXX functions uses Encoder, which appends a newline at the end of the stream
 		},
 	}
 

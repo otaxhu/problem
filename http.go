@@ -1,10 +1,12 @@
 package problem
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
 type problemHTTPWrapper struct {
@@ -13,31 +15,47 @@ type problemHTTPWrapper struct {
 	contentType string
 }
 
+var bufferPool = sync.Pool{
+	New: func() any {
+		return &bytes.Buffer{}
+	},
+}
+
+func getBuffer() *bytes.Buffer {
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	return buf
+}
+
 func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	buf := getBuffer()
+	defer bufferPool.Put(buf)
 
 	h := w.Header()
 
 	switch p.contentType {
 	case problemJsonContentType:
-		b, err := json.Marshal(p.p)
+		err := json.NewEncoder(buf).Encode(p.p)
 		if err != nil {
 			return
 		}
 		h.Set("Content-Type", problemJsonContentType)
 		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("Content-Length", strconv.Itoa(len(b)))
+		h.Set("Content-Length", strconv.Itoa(buf.Len()))
 		w.WriteHeader(p.p.GetStatus())
-		w.Write(b)
+		buf.WriteTo(w)
 	case problemXmlContentType:
-		b, err := xml.Marshal(p.p)
+		buf.WriteString(xml.Header)
+		err := xml.NewEncoder(buf).Encode(p.p)
 		if err != nil {
 			return
 		}
 		h.Set("Content-Type", problemXmlContentType)
 		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("Content-Length", strconv.Itoa(len(xml.Header)+len(b)))
+		h.Set("Content-Length", strconv.Itoa(buf.Len()))
 		w.WriteHeader(p.p.GetStatus())
-		w.Write(append([]byte(xml.Header), b...))
+		buf.WriteTo(w)
 	}
 }
 
