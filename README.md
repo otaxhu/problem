@@ -12,6 +12,9 @@ Library for parsing and creating HTTP Problem Details, following RFC 9457 docume
   <a href="https://goreportcard.com/report/github.com/otaxhu/problem" style="text-decoration:none;">
     <img src="https://goreportcard.com/badge/github.com/otaxhu/problem" alt="Go Report Card">
   </a>
+  <a href="https://github.com/otaxhu/problem/actions/workflows/ci.yml">
+    <img src="https://github.com/otaxhu/problem/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status">
+  </a>
 </div>
 
 ## Quick Usage:
