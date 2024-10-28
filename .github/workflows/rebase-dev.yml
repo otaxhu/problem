@@ -1,0 +1,30 @@
+name: Auto-Rebase dev branch after main accepted pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+    types:
+      - closed
+
+jobs:
+  rebase_dev:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Checkout dev branch and rebase onto main
+        run: |
+          git fetch origin dev
+          git checkout dev
+          git rebase main
+
+      - name: Push rebased dev branch
+        run: |
+          git push origin dev
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
