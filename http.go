@@ -35,16 +35,15 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 
 	switch p.contentType {
+	default:
+		// Any other content type should not be handled
+		return
 	case problemJsonContentType:
 		err := json.NewEncoder(buf).Encode(p.p)
 		if err != nil {
 			return
 		}
 		h.Set("Content-Type", problemJsonContentType)
-		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("Content-Length", strconv.Itoa(buf.Len()))
-		w.WriteHeader(p.p.GetStatus())
-		buf.WriteTo(w)
 	case problemXmlContentType:
 		buf.WriteString(xml.Header)
 		err := xml.NewEncoder(buf).Encode(p.p)
@@ -52,11 +51,12 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.Set("Content-Type", problemXmlContentType)
-		h.Set("X-Content-Type-Options", "nosniff")
-		h.Set("Content-Length", strconv.Itoa(buf.Len()))
-		w.WriteHeader(p.p.GetStatus())
-		buf.WriteTo(w)
 	}
+
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Content-Length", strconv.Itoa(buf.Len()))
+	w.WriteHeader(p.p.GetStatus())
+	buf.WriteTo(w)
 }
 
 // ServeXML returns a Handler that serves the p argument in XML format.
