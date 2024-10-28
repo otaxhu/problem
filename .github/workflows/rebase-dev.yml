@@ -21,6 +21,7 @@ jobs:
         run: |
           git fetch origin dev
           git checkout dev
+          git pull
           git rebase main
 
       - name: Push rebased dev branch
