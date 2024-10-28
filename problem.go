@@ -9,7 +9,7 @@ import (
 
 // Problem details interface, valid implementors are [MapProblem], [RegisteredProblem] and
 // Custom structs that embeds [RegisteredProblem] (is recommended you embed by value, not a pointer,
-// in that case you need to allocate appropiate memory for that field)
+// in that case you need to allocate appropriate memory for that field)
 type Problem interface {
 	GetType() string
 	GetStatus() int
