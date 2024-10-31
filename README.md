@@ -74,3 +74,13 @@ func main() {
     http.ListenAndServe(":8080", nil)
 }
 ```
+
+## Contributing
+
+Any kind of contribution is totally welcome, thank you very much for any contribution to this project.
+
+Any pull request that fixes little problems like "typos", or enhances documentation; does not need to open an issue in advance.
+
+Otherwise, if the pull request adds or modifies features, please make sure there is a open related issue. If there is no issue, then the pull request will likely be rejected.
+
+To start contributing, make your own fork of the repository, make sure to pull all of the commits from `main`, create a new branch from `main`, commit your changes, push changes to your fork, and start the pull request against `main`. Reviews of pull request may take a time, please be patient :wink:.
