@@ -1,6 +1,6 @@
 # HTTP Problem Details for Golang
 
-Library for parsing and creating HTTP Problem Details, following RFC 9457 document, for ensuring compatibility between other libraries.
+Library for parsing and creating HTTP Problem Details, following [RFC 9457 document](https://www.rfc-editor.org/rfc/rfc9457.html), for ensuring compatibility between other libraries.
 
 <div>
   <a href="https://pkg.go.dev/github.com/otaxhu/problem" style="text-decoration:none;">
@@ -16,6 +16,31 @@ Library for parsing and creating HTTP Problem Details, following RFC 9457 docume
     <img src="https://github.com/otaxhu/problem/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status">
   </a>
 </div>
+
+## Installation
+```sh
+$ go get github.com/otaxhu/problem
+```
+
+## Features
+
+- ### JSON and XML support:
+
+  You can encode/decode Problem Details in JSON and XML format using standard packages `encoding/json` and `encoding/xml`.
+
+  XML encoding/decoding has some limitations regarding `MapProblem` implementation, please read the [docs](https://pkg.go.dev/github.com/otaxhu/problem) to know more details.
+
+- ### HTTP Client APIs:
+
+  As an HTTP client, you can parse HTTP Problem Details responses using `ParseResponse()` and `ParseResponseCustom()` functions.
+
+- ### HTTP Server APIs:
+
+  As an HTTP server, you can respond to clients with Problem Details responses, using any of the available `Problem` interface implementations, encoding it using `ServeJSON()` or `ServeXML()` helpers.
+
+- ### Polymorphic Problem Details and Easy extension members:
+
+  You can embed `RegisteredProblem` struct in your own struct, and extend it with any members you want, as allowed by [RFC 9457 Section 3.2](https://www.rfc-editor.org/rfc/rfc9457.html#name-extension-members)
 
 ## Quick Usage:
 
