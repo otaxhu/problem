@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -89,7 +88,7 @@ func TestParseResponse(t *testing.T) {
 	testCases := map[string]struct {
 		InputBody       *http.Response
 		ExpectedProblem *RegisteredProblem
-		ExpectedError   error
+		ExpectedError   bool
 	}{
 		"JSON: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
@@ -108,7 +107,7 @@ func TestParseResponse(t *testing.T) {
 				Detail:   "test",
 				Instance: "/test",
 			},
-			ExpectedError: nil,
+			ExpectedError: false,
 		},
 		"XML: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
@@ -127,20 +126,40 @@ func TestParseResponse(t *testing.T) {
 				Detail:   "test",
 				Instance: "/test",
 			},
-			ExpectedError: nil,
+			ExpectedError: false,
 		},
 		"Bad Content Type": {
 			InputBody:       responseFactory(http.StatusInternalServerError, "text/plain", "Test plain"),
 			ExpectedProblem: nil,
-			ExpectedError:   ErrInvalidContentType,
+			ExpectedError:   true,
+		},
+		"JSON: Bad Syntax": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+				{
+					"status": 500 // Invalid JSON
+				}
+			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
+		},
+		"XML: Bad Syntax": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+				<problem>
+					<status>500</status>
+					No Closing Tag
+			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			outProblem, err := ParseResponse(tc.InputBody)
-			if !errors.Is(err, tc.ExpectedError) {
-				t.Fatalf("expected `%v`, got `%v`", tc.ExpectedError, err)
+			if tc.ExpectedError && err == nil {
+				t.Fatalf("expected error to be non-nil, got <nil>")
+			} else if !tc.ExpectedError && err != nil {
+				t.Fatalf("expected error to be nil, got %v", err)
 			}
 			if err != nil {
 				return
@@ -209,7 +228,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 	testCases := map[string]struct {
 		InputBody       *http.Response
 		ExpectedProblem *Embed
-		ExpectedError   error
+		ExpectedError   bool
 	}{
 		"JSON: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
@@ -234,7 +253,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 					Instance: "/test",
 				},
 			},
-			ExpectedError: nil,
+			ExpectedError: false,
 		},
 		"XML: OK": {
 			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
@@ -259,12 +278,30 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 					Instance: "/test",
 				},
 			},
-			ExpectedError: nil,
+			ExpectedError: false,
 		},
 		"Bad Content Type": {
 			InputBody:       responseFactory(http.StatusInternalServerError, "text/plain", "Test plain"),
 			ExpectedProblem: nil,
-			ExpectedError:   ErrInvalidContentType,
+			ExpectedError:   true,
+		},
+		"JSON: Bad Syntax": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+				{
+					"status": 500 // Invalid JSON
+				}
+			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
+		},
+		"XML: Bad Syntax": {
+			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+				<problem>
+					<status>500</status>
+					No Closing Tag
+			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
 		},
 	}
 
@@ -272,8 +309,10 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			outProblem := &Embed{}
 			err := ParseResponseCustom(tc.InputBody, outProblem)
-			if !errors.Is(err, tc.ExpectedError) {
-				t.Fatalf("expected `%v`, got `%v`", tc.ExpectedError, err)
+			if tc.ExpectedError && err == nil {
+				t.Fatalf("expected error to be non-nil, got <nil>")
+			} else if !tc.ExpectedError && err != nil {
+				t.Fatalf("expected error to be nil, got %v", err)
 			}
 			if err != nil {
 				return
@@ -342,6 +381,33 @@ func TestEmbeddedMarshaling(t *testing.T) {
 			// if !bytes.Equal(b, []byte(tc.ExpectedXML)) {
 			// 	t.Errorf("expected %s, got %s", tc.ExpectedXML, b)
 			// }
+		})
+	}
+}
+
+// IMPORTANT:
+//
+// Since maps are unordered data structures by nature, this test will only check if
+// InputProblem produces valid JSON when marshaled, it will not do a very deep comparison.
+func TestMapProblemMarshaling(t *testing.T) {
+
+	testCases := map[string]struct {
+		InputProblem MapProblem
+	}{
+		"OK": {
+			InputProblem: NewMap(http.StatusInternalServerError, "Test"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			b, err := json.Marshal(tc.InputProblem)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !json.Valid(b) {
+				t.Fatalf("expected JSON to be valid")
+			}
 		})
 	}
 }
