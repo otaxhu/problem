@@ -35,21 +35,12 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 
 	switch p.contentType {
-	default:
-		// Any other content type should not be handled
-		return
 	case problemJsonContentType:
-		err := json.NewEncoder(buf).Encode(p.p)
-		if err != nil {
-			return
-		}
+		json.NewEncoder(buf).Encode(p.p)
 		h.Set("Content-Type", problemJsonContentType)
 	case problemXmlContentType:
 		buf.WriteString(xml.Header)
-		err := xml.NewEncoder(buf).Encode(p.p)
-		if err != nil {
-			return
-		}
+		xml.NewEncoder(buf).Encode(p.p)
 		h.Set("Content-Type", problemXmlContentType)
 	}
 
