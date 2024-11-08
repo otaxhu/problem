@@ -116,8 +116,6 @@ func ParseResponseCustom(res *http.Response, p Problem) error {
 			return err
 		}
 
-		p.setStatus(res.StatusCode)
-
 	} else if contentType == problemXmlContentType {
 
 		err := xml.NewDecoder(res.Body).Decode(p)
@@ -125,9 +123,9 @@ func ParseResponseCustom(res *http.Response, p Problem) error {
 			return err
 		}
 
-		p.setStatus(res.StatusCode)
-
 	}
+
+	p.setStatus(res.StatusCode)
 
 	return nil
 }
