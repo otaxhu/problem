@@ -63,7 +63,7 @@ func main() {
         mp := p.(*MapProblem)
 
         // bank_accounts is a list of accounts
-        for _, ac := range mp["bank_accounts"] {
+        for _, ac := range mp["bank_accounts"].([]any) {
             // Do something...
         }
         os.Exit(1)
@@ -90,6 +90,76 @@ func main() {
             // Setting a extension member
             p["more_info"] = []string{"foo", "bar", "baz"}
             problem.ServeJSON(p).ServeHTTP(w, r)
+            return
+        }
+
+        w.WriteHeader(http.StatusOK)
+    })
+
+    http.ListenAndServe(":8080", nil)
+}
+```
+
+### Client Code (Custom Problem):
+
+```go
+import (
+    "net/http"
+
+    "github.com/otaxhu/problem"
+)
+
+type CustomProblem struct {
+    problem.RegisteredProblem
+    ExtensionMember string `json:"extension_member" xml:"extension_member"`
+}
+
+func main() {
+    res, _ := http.Get("https://example.org/endpoint")
+
+    if res.StatusCode != http.StatusOK {
+        var p CustomProblem
+        _ = problem.ParseResponseCustom(res, &p)
+
+        // You get p populated with the Problem Details
+        fmt.Println(p.Detail, p.ExtensionMember)
+
+        os.Exit(1)
+    }
+
+    fmt.Println("Everything is OK")
+}
+```
+
+### Server Code (Custom Problem):
+
+```go
+import (
+    "net/http"
+
+    "github.com/otaxhu/problem"
+)
+
+type CustomProblem struct {
+    problem.RegisteredProblem
+    ExtensionMember string `json:"extension_member" xml:"extension_member"`
+}
+
+func main() {
+    http.HandleFunc("GET /endpoint", func(w http.ResponseWriter, r *http.Request) {
+        if r.Header.Get("X-Application-Specific") == "bad foo" {
+            p := &CustomProblem{
+                // NewRegistered Returns a pointer, you need to derefence it using *
+                RegisteredProblem: *problem.NewRegistered(http.StatusBadRequest, "bad parameter"),
+                ExtensionMember:   "bar",
+            }
+
+            // Using JSON:
+            problem.ServeJSON(p).ServeHTTP(w, r)
+
+            // Using XML:
+            //
+            // problem.ServeXML(p).ServeHTTP(w, r)
             return
         }
 
