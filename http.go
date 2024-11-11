@@ -37,13 +37,12 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch p.contentType {
 	case problemJsonContentType:
 		json.NewEncoder(buf).Encode(p.p)
-		h.Set("Content-Type", problemJsonContentType)
 	case problemXmlContentType:
 		buf.WriteString(xml.Header)
 		xml.NewEncoder(buf).Encode(p.p)
-		h.Set("Content-Type", problemXmlContentType)
 	}
 
+	h.Set("Content-Type", p.contentType)
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Content-Length", strconv.Itoa(buf.Len()))
 	w.WriteHeader(p.p.GetStatus())
