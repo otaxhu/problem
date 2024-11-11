@@ -205,6 +205,12 @@ func TestServe(t *testing.T) {
 				t.Errorf("expected %s, got %s", tc.ExpectedJSON, recorder.Body.String())
 			}
 
+			contentType := recorder.Result().Header.Get("Content-Type")
+
+			if contentType != problemJsonContentType {
+				t.Errorf("expected %s, got %s", problemJsonContentType, contentType)
+			}
+
 			// TODO: See above, find a way to compact a XML document.
 			//
 			// recorder = httptest.NewRecorder()
@@ -213,6 +219,12 @@ func TestServe(t *testing.T) {
 			//
 			// if recorder.Body.String() != tc.ExpectedXML {
 			// 	t.Errorf("expected %s, got %s", tc.ExpectedJSON, recorder.Body.String())
+			// }
+			//
+			// contentType = recorder.Result().Header.Get("Content-Type")
+			//
+			// if contentType != problemJsonContentType {
+			// 	t.Errorf("expected %s, got %s", problemJsonContentType, contentType)
 			// }
 		})
 	}
