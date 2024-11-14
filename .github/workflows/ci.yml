@@ -26,6 +26,7 @@ jobs:
         go test -v -coverprofile=profile.cov ./...
 
     - name: Send Coverage
+      if: github.event_name == 'push'
       uses: shogo82148/actions-goveralls@v1
       continue-on-error: true
       with:
