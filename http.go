@@ -36,17 +36,17 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch p.contentType {
 	case problemJsonContentType:
-		json.NewEncoder(buf).Encode(p.p)
+		_ = json.NewEncoder(buf).Encode(p.p)
 	case problemXmlContentType:
 		buf.WriteString(xml.Header)
-		xml.NewEncoder(buf).Encode(p.p)
+		_ = xml.NewEncoder(buf).Encode(p.p)
 	}
 
 	h.Set("Content-Type", p.contentType)
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Content-Length", strconv.Itoa(buf.Len()))
 	w.WriteHeader(p.p.GetStatus())
-	buf.WriteTo(w)
+	_, _ = buf.WriteTo(w)
 }
 
 // ServeXML returns a Handler that serves the p argument in XML format.
