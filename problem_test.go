@@ -91,7 +91,7 @@ func TestParseResponse(t *testing.T) {
 		ExpectedError   bool
 	}{
 		"JSON: OK": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
 				{
 					"type": "about:blank",
 					"status": 500,
@@ -110,7 +110,7 @@ func TestParseResponse(t *testing.T) {
 			ExpectedError: false,
 		},
 		"XML: OK": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
 				<problem xmlns="urn:ietf:rfc:7807">
 					<type>about:blank</type>
 					<status>500</status>
@@ -134,7 +134,7 @@ func TestParseResponse(t *testing.T) {
 			ExpectedError:   true,
 		},
 		"JSON: Bad Syntax": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
 				{
 					"status": 500 // Invalid JSON
 				}
@@ -143,7 +143,7 @@ func TestParseResponse(t *testing.T) {
 			ExpectedError:   true,
 		},
 		"XML: Bad Syntax": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
 				<problem>
 					<status>500</status>
 					No Closing Tag
@@ -207,8 +207,8 @@ func TestServe(t *testing.T) {
 
 			contentType := recorder.Result().Header.Get("Content-Type")
 
-			if contentType != problemJsonContentType {
-				t.Errorf("expected %s, got %s", problemJsonContentType, contentType)
+			if contentType != MediaTypeProblemJSON {
+				t.Errorf("expected %s, got %s", MediaTypeProblemJSON, contentType)
 			}
 
 			// TODO: See above, find a way to compact a XML document.
@@ -243,7 +243,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 		ExpectedError   bool
 	}{
 		"JSON: OK": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
 				{
 					"type": "about:blank",
 					"status": 500,
@@ -268,7 +268,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 			ExpectedError: false,
 		},
 		"XML: OK": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
 				<problem xmlns="urn:ietf:rfc:7807">
 					<type>about:blank</type>
 					<status>500</status>
@@ -298,7 +298,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 			ExpectedError:   true,
 		},
 		"JSON: Bad Syntax": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemJsonContentType, `
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
 				{
 					"status": 500 // Invalid JSON
 				}
@@ -307,7 +307,7 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 			ExpectedError:   true,
 		},
 		"XML: Bad Syntax": {
-			InputBody: responseFactory(http.StatusInternalServerError, problemXmlContentType, xml.Header+`
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
 				<problem>
 					<status>500</status>
 					No Closing Tag

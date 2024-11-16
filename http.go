@@ -35,9 +35,9 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 
 	switch p.contentType {
-	case problemJsonContentType:
+	case MediaTypeProblemJSON:
 		_ = json.NewEncoder(buf).Encode(p.p)
-	case problemXmlContentType:
+	case MediaTypeProblemXML:
 		buf.WriteString(xml.Header)
 		_ = xml.NewEncoder(buf).Encode(p.p)
 	}
@@ -58,7 +58,7 @@ func (p *problemHTTPWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func ServeXML(p Problem) http.Handler {
 	return &problemHTTPWrapper{
 		p:           p,
-		contentType: problemXmlContentType,
+		contentType: MediaTypeProblemXML,
 	}
 }
 
@@ -69,6 +69,6 @@ func ServeXML(p Problem) http.Handler {
 func ServeJSON(p Problem) http.Handler {
 	return &problemHTTPWrapper{
 		p:           p,
-		contentType: problemJsonContentType,
+		contentType: MediaTypeProblemJSON,
 	}
 }

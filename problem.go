@@ -72,10 +72,10 @@ func ParseResponse(res *http.Response) (Problem, error) {
 
 	var p Problem
 
-	if contentType == problemJsonContentType {
+	if contentType == MediaTypeProblemJSON {
 		// Use a MapProblem
 		p = &MapProblem{}
-	} else if contentType == problemXmlContentType {
+	} else if contentType == MediaTypeProblemXML {
 		// Use RegisteredProblem, gonna lost extension members but it's better than failing
 		p = &RegisteredProblem{}
 	} else {
@@ -103,20 +103,20 @@ func ParseResponse(res *http.Response) (Problem, error) {
 func ParseResponseCustom(res *http.Response, p Problem) error {
 	contentType := res.Header.Get("Content-Type")
 
-	if contentType != problemJsonContentType && contentType != problemXmlContentType {
+	if contentType != MediaTypeProblemJSON && contentType != MediaTypeProblemXML {
 		return fmt.Errorf("%w: got '%s'", ErrInvalidContentType, contentType)
 	}
 
 	defer res.Body.Close()
 
-	if contentType == problemJsonContentType {
+	if contentType == MediaTypeProblemJSON {
 
 		err := json.NewDecoder(res.Body).Decode(p)
 		if err != nil {
 			return err
 		}
 
-	} else if contentType == problemXmlContentType {
+	} else if contentType == MediaTypeProblemXML {
 
 		err := xml.NewDecoder(res.Body).Decode(p)
 		if err != nil {
