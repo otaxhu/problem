@@ -31,6 +31,9 @@ type RegisteredProblem struct {
 	Instance string `json:"instance" xml:"instance"`
 }
 
+// RegisteredProblem implements Problem
+var _ Problem = (*RegisteredProblem)(nil)
+
 func (r RegisteredProblem) GetType() string {
 	return r.Type
 }
@@ -64,6 +67,9 @@ func (r *RegisteredProblem) setStatus(status int) {
 //
 //	mapProblem["extension_member"]
 type MapProblem map[string]any
+
+// MapProblem implements Problem
+var _ Problem = (MapProblem)(nil)
 
 func (m MapProblem) GetType() string {
 	v, _ := m["type"].(string)
