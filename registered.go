@@ -1,8 +1,14 @@
 package problem
 
-const problemJsonContentType = "application/problem+json"
+// Media type for JSON Problem Details
+//
+// https://datatracker.ietf.org/doc/html/rfc9457#name-iana-considerations
+const MediaTypeProblemJSON = "application/problem+json"
 
-const problemXmlContentType = "application/problem+xml"
+// Media type for XML Problem Details
+//
+// https://datatracker.ietf.org/doc/html/rfc9457#name-iana-considerations
+const MediaTypeProblemXML = "application/problem+xml"
 
 // Problem details registered members, as those specified in
 // https://datatracker.ietf.org/doc/html/rfc9457#name-members-of-a-problem-detail
