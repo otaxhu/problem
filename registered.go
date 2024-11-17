@@ -58,6 +58,10 @@ func (r *RegisteredProblem) setStatus(status int) {
 	r.Status = status
 }
 
+func (r *RegisteredProblem) setTypeAboutBlank() {
+	r.Type = "about:blank"
+}
+
 // Problem details map, this implementation is ONLY suitable for JSON marshaling/unmarshaling,
 // it does not support XML.
 //
@@ -98,4 +102,8 @@ func (m MapProblem) GetInstance() string {
 
 func (m MapProblem) setStatus(status int) {
 	m["status"] = status
+}
+
+func (m MapProblem) setTypeAboutBlank() {
+	m["type"] = "about:blank"
 }
