@@ -1,7 +1,7 @@
 module github.com/otaxhu/problem
 
-go 1.22.0
+go 1.23.3
 
-retract (
-    v1.0.0 // NewMap returned a pointer, changed to return not a pointer
-)
+retract v1.0.0 // NewMap returned a pointer, changed to return not a pointer
+
+require github.com/otaxhu/type-mismatch-encoding v0.0.0-20241117172253-59bedb66f7cd
