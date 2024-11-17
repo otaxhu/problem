@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/iotest"
 )
 
 func equalProblems(a Problem, b Problem) bool {
@@ -35,6 +37,16 @@ func responseFactory(statusCode int, contentType, body string) *http.Response {
 			"Content-Type": []string{contentType},
 		},
 		Body: io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+func responseFactoryErrorBody(statusCode int, contentType string) *http.Response {
+	return &http.Response{
+		StatusCode: statusCode,
+		Header: http.Header{
+			"Content-Type": []string{contentType},
+		},
+		Body: io.NopCloser(iotest.ErrReader(errors.New("TEST"))),
 	}
 }
 
@@ -148,6 +160,104 @@ func TestParseResponse(t *testing.T) {
 					<status>500</status>
 					No Closing Tag
 			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
+		},
+		"XML: Missing Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+				</problem>
+			`),
+			ExpectedProblem: &RegisteredProblem{
+				Type:     "about:blank",
+				Status:   500,
+				Title:    "Internal Server Error",
+				Detail:   "test",
+				Instance: "/test",
+			},
+			ExpectedError: false,
+		},
+		"XML: Empty Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<type></type>
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+				</problem>
+			`),
+			ExpectedProblem: &RegisteredProblem{
+				Type:     "",
+				Status:   500,
+				Title:    "Internal Server Error",
+				Detail:   "test",
+				Instance: "/test",
+			},
+			ExpectedError: false,
+		},
+		"JSON: Missing Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test"
+				}
+			`),
+			ExpectedProblem: &RegisteredProblem{
+				Type:     "about:blank",
+				Status:   500,
+				Title:    "Internal Server Error",
+				Detail:   "test",
+				Instance: "/test",
+			},
+			ExpectedError: false,
+		},
+		"JSON: Empty Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"type": "",
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test"
+				}
+			`),
+			ExpectedProblem: &RegisteredProblem{
+				Type:     "",
+				Status:   500,
+				Title:    "Internal Server Error",
+				Detail:   "test",
+				Instance: "/test",
+			},
+			ExpectedError: false,
+		},
+		"JSON: Incorrect JSON Type For Type Member": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"type": 123,
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test"
+				}
+			`),
+			ExpectedProblem: &RegisteredProblem{
+				Type:     "about:blank",
+				Status:   500,
+				Title:    "Internal Server Error",
+				Detail:   "test",
+				Instance: "/test",
+			},
+			ExpectedError: false,
+		},
+		"Bad Body": {
+			InputBody:       responseFactoryErrorBody(http.StatusInternalServerError, MediaTypeProblemJSON),
 			ExpectedProblem: nil,
 			ExpectedError:   true,
 		},
@@ -312,6 +422,133 @@ func TestEmbeddedParseResponseCustom(t *testing.T) {
 					<status>500</status>
 					No Closing Tag
 			`),
+			ExpectedProblem: nil,
+			ExpectedError:   true,
+		},
+		"XML: Missing Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+					<extension1>e1</extension1>
+					<extension2>e2</extension2>
+				</problem>
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "about:blank",
+					Status:   500,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+			ExpectedError: false,
+		},
+		"XML: Empty Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemXML, xml.Header+`
+				<problem xmlns="urn:ietf:rfc:7807">
+					<type></type>
+					<status>500</status>
+					<title>Internal Server Error</title>
+					<detail>test</detail>
+					<instance>/test</instance>
+					<extension1>e1</extension1>
+					<extension2>e2</extension2>
+				</problem>
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "",
+					Status:   500,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+			ExpectedError: false,
+		},
+		"JSON: Missing Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test",
+					"extension1": "e1",
+					"extension2": "e2"
+				}
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "about:blank",
+					Status:   500,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+			ExpectedError: false,
+		},
+		"JSON: Empty Type": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"type": "",
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test",
+					"extension1": "e1",
+					"extension2": "e2"
+				}
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "",
+					Status:   500,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+		},
+		"JSON: Incorrect JSON Type For Type Member": {
+			InputBody: responseFactory(http.StatusInternalServerError, MediaTypeProblemJSON, `
+				{
+					"type": 123,
+					"status": 500,
+					"title": "Internal Server Error",
+					"detail": "test",
+					"instance": "/test",
+					"extension1": "e1",
+					"extension2": "e2"
+				}
+			`),
+			ExpectedProblem: &Embed{
+				Extension1: "e1",
+				Extension2: "e2",
+				RegisteredProblem: RegisteredProblem{
+					Type:     "about:blank",
+					Status:   500,
+					Title:    "Internal Server Error",
+					Detail:   "test",
+					Instance: "/test",
+				},
+			},
+			ExpectedError: false,
+		},
+		"Bad Body": {
+			InputBody:       responseFactoryErrorBody(http.StatusInternalServerError, MediaTypeProblemJSON),
 			ExpectedProblem: nil,
 			ExpectedError:   true,
 		},

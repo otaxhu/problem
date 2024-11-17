@@ -1,10 +1,13 @@
 package problem
 
 import (
-	"encoding/json"
-	"encoding/xml"
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+
+	tme_json "github.com/otaxhu/type-mismatch-encoding/encoding/json"
+	tme_xml "github.com/otaxhu/type-mismatch-encoding/encoding/xml"
 )
 
 // Problem details interface, valid implementors are [MapProblem], [RegisteredProblem] and
@@ -22,6 +25,10 @@ type Problem interface {
 	// Also works as a "Must embed" method when creating customs Problems, customs Problems
 	// must embed [RegisteredProblem]
 	setStatus(status int)
+
+	// For setting "about:blank" to type when the problem detail's type member is not present or
+	// has a JSON type other than string.
+	setTypeAboutBlank()
 }
 
 // NewMap returns a [MapProblem], this implementation is ONLY suitable for JSON
@@ -107,22 +114,90 @@ func ParseResponseCustom(res *http.Response, p Problem) error {
 		return fmt.Errorf("%w: got '%s'", ErrInvalidContentType, contentType)
 	}
 
-	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if err != nil {
+		return err
+	}
 
-	if contentType == MediaTypeProblemJSON {
+	// See issue https://github.com/otaxhu/problem/issues/14
+	//
+	// This structs checks that "type" is present or has an incorrect type (on JSON)
+	// and act accordingly by setting "type" to "about:blank"
+	//
+	// RFC 9457 Section 3.1 https://www.rfc-editor.org/rfc/rfc9457.html#section-3.1-1
+	//
+	// "...If a member's value type does not match the specified type, the member MUST
+	// be ignored -- i.e., processing will continue as if the member had not been present."
+	//
+	// RFC 9457 Section 3.1.1 https://www.rfc-editor.org/rfc/rfc9457.html#section-3.1.1-2
+	//
+	// "When this member ("type") is not present, its value is assumed to be "about:blank"."
 
-		err := json.NewDecoder(res.Body).Decode(p)
+	checkTypeJSON := struct {
+		Type any `json:"type"`
+	}{}
+
+	checkTypeXML := struct {
+		XMLName struct{} `xml:"urn:ietf:rfc:7807 problem"`
+		Type    *string  `xml:"type"`
+	}{}
+
+	br := bytes.NewReader(b)
+
+	switch contentType {
+	case MediaTypeProblemJSON:
+
+		dec := tme_json.NewDecoder(br)
+		dec.AllowTypeMismatch()
+
+		err := dec.Decode(p)
 		if err != nil {
 			return err
 		}
 
-	} else if contentType == MediaTypeProblemXML {
+		if p.GetType() == "" {
+			br.Reset(b)
 
-		err := xml.NewDecoder(res.Body).Decode(p)
+			dec = tme_json.NewDecoder(br)
+			dec.AllowTypeMismatch()
+
+			err = dec.Decode(&checkTypeJSON)
+			if err != nil {
+				return err
+			}
+
+			if _, ok := checkTypeJSON.Type.(string); !ok {
+				p.setTypeAboutBlank()
+			}
+		}
+
+	case MediaTypeProblemXML:
+
+		dec := tme_xml.NewDecoder(br)
+		dec.AllowTypeMismatch = true
+
+		err := dec.Decode(p)
 		if err != nil {
 			return err
 		}
 
+		if p.GetType() == "" {
+
+			br.Reset(b)
+
+			dec = tme_xml.NewDecoder(br)
+			dec.AllowTypeMismatch = true
+
+			err = dec.Decode(&checkTypeXML)
+			if err != nil {
+				return err
+			}
+
+			if checkTypeXML.Type == nil {
+				p.setTypeAboutBlank()
+			}
+		}
 	}
 
 	p.setStatus(res.StatusCode)
