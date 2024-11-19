@@ -3,7 +3,6 @@ package problem
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 
 	tme_json "github.com/otaxhu/type-mismatch-encoding/encoding/json"
@@ -114,11 +113,16 @@ func ParseResponseCustom(res *http.Response, p Problem) error {
 		return fmt.Errorf("%w: got '%s'", ErrInvalidContentType, contentType)
 	}
 
-	b, err := io.ReadAll(res.Body)
+	buf := getBuffer()
+	defer bufferPool.Put(buf)
+
+	_, err := buf.ReadFrom(res.Body)
 	res.Body.Close()
 	if err != nil {
 		return err
 	}
+
+	b := buf.Bytes()
 
 	// See issue https://github.com/otaxhu/problem/issues/14
 	//
